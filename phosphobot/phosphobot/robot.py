@@ -3,7 +3,33 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, List, Set
 
-from async_property import async_property
+# ``async_property`` is a tiny helper dependency that may be missing in lean
+# simulation-only installs.  Fall back to a no-op decorator that simply
+# returns the coroutine function so the code can still run (call sites will
+# need to await explicitly).
+
+try:
+    from async_property import async_property  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover – optional dependency
+
+    def async_property(func):  # type: ignore
+        """Fallback decorator when ``async_property`` is absent.
+
+        Returns a property that awaits the coroutine when accessed.
+        Very small subset of the real package but enough for our use-case.
+        """
+
+        class _AsyncProperty:  # pylint: disable=too-few-public-methods
+            def __set_name__(self, owner, name):
+                self.name = name
+
+            async def __get__(self, instance, owner):  # noqa: D401
+                if instance is None:
+                    return self  # accessing on class
+                return await func(instance)
+
+        return _AsyncProperty()
+
 import pybullet as p  # type: ignore
 from fastapi import HTTPException
 from loguru import logger
