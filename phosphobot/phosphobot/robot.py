@@ -12,23 +12,34 @@ try:
     from async_property import async_property  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover – optional dependency
 
-    def async_property(func):  # type: ignore
-        """Fallback decorator when ``async_property`` is absent.
+    import functools
 
-        Returns a property that awaits the coroutine when accessed.
-        Very small subset of the real package but enough for our use-case.
+    def async_property(func):  # type: ignore
+        """Minimal replacement for :pypi:`async-property`.
+
+        Usage stays the same::
+
+            class Foo:
+                @async_property
+                async def bar(self):
+                    ...
+
+            foo = Foo()
+            value = await foo.bar
         """
 
-        class _AsyncProperty:  # pylint: disable=too-few-public-methods
+        @functools.wraps(func)
+        class _AsyncDescriptor:  # pylint: disable=too-few-public-methods
             def __set_name__(self, owner, name):
-                self.name = name
+                self._cache_name = f"_{name}_cached"
 
-            async def __get__(self, instance, owner):  # noqa: D401
+            def __get__(self, instance, owner):  # noqa: D401
                 if instance is None:
-                    return self  # accessing on class
-                return await func(instance)
+                    return self
+                # Don't cache because real library doesn't by default.
+                return func(instance)
 
-        return _AsyncProperty()
+        return _AsyncDescriptor()
 
 import pybullet as p  # type: ignore
 from fastapi import HTTPException
@@ -53,15 +64,18 @@ from phosphobot.utils import is_can_plugged
 rcm = None
 
 robot_name_to_class = {
-    SO100Hardware.name: SO100Hardware,
-    KochHardware.name: KochHardware,
-    WX250SHardware.name: WX250SHardware,
-    UnitreeGo2.name: UnitreeGo2,
-    LeKiwi.name: LeKiwi,
+    SO100Hardware.name: SO100Hardware if SO100Hardware else None,
+    KochHardware.name if KochHardware else "Koch": KochHardware,
+    WX250SHardware.name if WX250SHardware else "WX250S": WX250SHardware,
+    UnitreeGo2.name if UnitreeGo2 else "Go2": UnitreeGo2,
+    LeKiwi.name if LeKiwi else "LeKiwi": LeKiwi,
     PiperHardware.name: PiperHardware,
     RemotePhosphobot.name: RemotePhosphobot,
 }
 
+# Remove any None values that slipped through so attribute access on .name does
+# not raise when running in simulation-only environments.
+robot_name_to_class = {k: v for k, v in robot_name_to_class.items() if v is not None}
 
 @dataclass
 class NewAndOldPorts:
