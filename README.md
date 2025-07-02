@@ -191,6 +191,31 @@ xvfb-run -s "-screen 0 1024x768x24" phosphobot run --only-simulation --simulatio
 
 For automated testing you can stick to the default `--simulation=headless`.
 
+### Missing low-level system libs / vendor SDKs (optional robots)
+Certain robot back-ends (e.g. **Unitree GO2**, **Piper**, **SO-100**) ship
+Python wrappers that depend on vendor SDKs or large native libraries.  When the
+wrapper cannot be imported the simulator and core HTTP server will still work
+— you will now just see a harmless warning:
+
+```
+ImportError: No module named 'go2_webrtc_driver'  # ignored
+```
+
+If you only care about the simulation you may safely ignore those messages.  A
+real robot will, of course, require its corresponding SDK to be installed.
+
+### `ModuleNotFoundError: netifaces / toml / serial / httpx`
+
+These lightweight helper libraries are used to discover the local IP address
+(`netifaces`), parse **pyproject.toml** files (`toml`), enumerate USB/Serial
+ports (`pyserial`), or perform HTTP requests (`httpx`).
+
+Install them with:
+
+```bash
+pip install --break-system-packages netifaces toml pyserial httpx
+```
+
 ## Contributing
 
 We welcome contributions! Some of the ways you can contribute:
