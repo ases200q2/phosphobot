@@ -1,4 +1,20 @@
-import sentry_sdk
+# sentry-sdk is optional. Create a lightweight stub when the library is
+# unavailable so that simulation-only installs do not crash at import time.
+try:
+    import sentry_sdk  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover – optional dependency
+    class _SentryStub:  # pylint: disable=too-few-public-methods
+        def init(self, *_, **__):
+            pass
+
+        def flush(self, *_, **__):
+            pass
+
+        def set_user(self, *_: object, **__: object):
+            pass
+
+
+    sentry_sdk = _SentryStub()  # type: ignore
 
 from phosphobot._version import __version__
 from phosphobot.telemetry import TELEMETRY

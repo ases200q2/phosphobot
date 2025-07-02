@@ -1,4 +1,9 @@
-from . import motors
+# The motors sub-package may depend on vendor SDKs (e.g. Dynamixel). Wrap it in
+# a soft-import so that simulation-only environments do not error out.
+try:
+    from . import motors  # pragma: no cover
+except ModuleNotFoundError:
+    motors = None  # type: ignore
 from .base import BaseManipulator, BaseMobileRobot, BaseRobot
 # Optional hardware back-ends – gracefully ignore if their heavy/extra
 # dependencies are missing so that "simulation-only" environments work.
