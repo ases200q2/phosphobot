@@ -12,32 +12,33 @@ try:
     from async_property import async_property  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover – optional dependency
 
-    import functools
+    from types import coroutine as _coroutine_marker
 
     def async_property(func):  # type: ignore
-        """Minimal replacement for :pypi:`async-property`.
+        """Fallback decorator emulating :pypi:`async-property`.
 
-        Usage stays the same::
-
-            class Foo:
-                @async_property
-                async def bar(self):
-                    ...
-
-            foo = Foo()
-            value = await foo.bar
+        Accessing the attribute returns an awaitable object that delegates to
+        the underlying coroutine function.
         """
 
-        @functools.wraps(func)
+        class _AwaitableWrapper:  # pylint: disable=too-few-public-methods
+            __slots__ = ("_coro",)
+
+            def __init__(self, coro):
+                self._coro = coro
+
+            @_coroutine_marker
+            def __await__(self):  # noqa: D401
+                return self._coro.__await__()
+
         class _AsyncDescriptor:  # pylint: disable=too-few-public-methods
             def __set_name__(self, owner, name):
-                self._cache_name = f"_{name}_cached"
+                self._func = func
 
             def __get__(self, instance, owner):  # noqa: D401
                 if instance is None:
                     return self
-                # Don't cache because real library doesn't by default.
-                return func(instance)
+                return _AwaitableWrapper(self._func(instance))
 
         return _AsyncDescriptor()
 
