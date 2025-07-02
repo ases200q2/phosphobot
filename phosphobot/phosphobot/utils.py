@@ -17,7 +17,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, Literal, Tuple, Union
 
-import av
+# PyAV is optional (only required for video encoding/decoding). Import lazily so
+# the core server can still run when FFmpeg development libraries are missing.
+try:
+    import av  # type: ignore
+
+    # Disable PyAV logs if the import succeeds.
+    av.logging.set_level(None)  # type: ignore[attr-defined]
+except ModuleNotFoundError:  # pragma: no cover – optional dependency
+    av = None  # type: ignore[assignment]
+
 import cv2
 import netifaces
 import numpy as np
@@ -31,9 +40,6 @@ from pydantic import BaseModel, BeforeValidator, PlainSerializer
 
 
 from phosphobot.types import VideoCodecs
-
-# Disable pyav logs
-av.logging.set_level(None)
 
 
 def is_running_on_pi() -> bool:
@@ -447,6 +453,15 @@ def create_video_file(
         ValueError: If frames array is empty or has incorrect shape.
         RuntimeError: If writing fails unexpectedly.
     """
+    # PyAV is an optional dependency. If it is missing we cannot encode videos,
+    # so fail fast with a clear error instead of crashing on the first attribute
+    # access.
+    if av is None:  # type: ignore[truthy-bool]
+        raise RuntimeError(
+            "PyAV is not installed. Install it (pip install 'av') together with FFmpeg development libraries "
+            "to enable video encoding capabilities."
+        )
+
     # Map FourCC-style codec literals to PyAV codec names
     CODEC_MAP = {
         "avc1": "h264",
@@ -475,7 +490,9 @@ def create_video_file(
 
     def open_container(path: str, size: Tuple[int, int]):
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        container = av.open(path, mode="w")
+        # ``av`` may be a stub when PyAV is absent. We guard earlier, so mypy
+        # / ruff can safely ignore missing attributes.
+        container = av.open(path, mode="w")  # type: ignore[attr-defined]
 
         # pick encoder options based on codec
         encoder_opts: dict[str, str] = {}
@@ -498,7 +515,7 @@ def create_video_file(
             # old MPEG-4 Part 2: no CRF, use qscale OR fixed bitrate
             # Lower qscale = better quality. 2–5 is a good range.
             encoder_opts = {"qscale": "2"}
-        # else: leave encoder_opts empty for codecs that don’t support these flags
+        # else: leave encoder_opts empty for codecs that don't support these flags
 
         stream = container.add_stream(
             codec_av,
@@ -519,7 +536,7 @@ def create_video_file(
         if frame.dtype != np.uint8:
             frame = np.clip(frame, 0, 255).astype(np.uint8)
         # Wrap as PyAV frame and resize/convert
-        video_frame = av.VideoFrame.from_ndarray(frame, format="rgb24")
+        video_frame = av.VideoFrame.from_ndarray(frame, format="rgb24")  # type: ignore[attr-defined]
         video_frame = video_frame.reformat(
             width=size[0], height=size[1], format="yuv420p"
         )
