@@ -163,6 +163,34 @@ uv run phosphobot run --only-simulation --simulation=headless --port 8080 --no-t
 
 > _Note: some features, such as connection to the phospho cloud, AI training, and AI control, are not available when installing from source._
 
+## Troubleshooting
+
+### ImportError: `av` (PyAV) missing
+
+Encoding video files requires the optional [PyAV](https://github.com/PyAV-Org/PyAV) bindings and the FFmpeg development headers.  If you only want to **run the simulator or the HTTP server** you can ignore this warning—PyAV-dependent features are disabled automatically.
+
+If you do need video support, first install the FFmpeg dev libs then PyAV:
+
+```bash
+# Debian / Ubuntu
+sudo apt-get install -y libavformat-dev libavcodec-dev libavdevice-dev \
+                       libavutil-dev libavfilter-dev libswscale-dev libswresample-dev
+
+# Then (inside your venv)
+pip install av --break-system-packages
+```
+
+### GUI mode on a headless server (no display)
+
+The `--simulation=gui` option opens the PyBullet window which requires an X11 display.  On cloud VMs or CI runners you can emulate a display with `xvfb`:
+
+```bash
+sudo apt-get install -y xvfb
+xvfb-run -s "-screen 0 1024x768x24" phosphobot run --only-simulation --simulation=gui
+```
+
+For automated testing you can stick to the default `--simulation=headless`.
+
 ## Contributing
 
 We welcome contributions! Some of the ways you can contribute:
