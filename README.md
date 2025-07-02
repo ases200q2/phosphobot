@@ -29,13 +29,13 @@ Purchase your Phospho starter pack at [robots.phospho.ai](https://robots.phospho
 ### 2. Install the phosphobot server
 
 ```bash
-# Install it this way
+# Install it this way
 curl -fsSL https://raw.githubusercontent.com/phospho-app/phosphobot/main/install.sh | bash
-# Start it this way
+# Start it this way
 phosphobot run
-# Upgrade it with brew or with apt
+# Upgrade it with brew or with apt
 # sudo apt update && sudo apt install phosphobot
-# brew update && brew upgrade phosphobot
+# brew update && brew upgrade phosphobot
 # powershell -ExecutionPolicy ByPass -Command "irm https://raw.githubusercontent.com/phospho-app/phosphobot/main/install.ps1 | iex"
 ```
 
@@ -119,6 +119,13 @@ Connect with other developers and share your experience in our [Discord communit
 
 ## Install from source
 
+0. (Recommended) Create a virtual environment and install the Python dependencies listed in `requirements.txt`:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
+
 1. Download and install [uv](https://docs.astral.sh/uv/getting-started/installation/) and [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm). Best compatibility is with `python>=3.10` and `node>=20`.
 
 2. Clone github
@@ -144,6 +151,14 @@ cd phosphobot && uv run --python 3.10 phosphobot run --simulation=headless
 
 ```bash
 curl -X 'GET' 'http://localhost/status' -H 'accept: application/json'
+```
+
+If you only need a quick simulation test without building the dashboard you can now run:
+
+```bash
+uv pip install -e ./phosphobot   # or 'pip install -e ./phosphobot' if you skipped step 0
+uv run phosphobot run --only-simulation --simulation=headless --port 8080 --no-telemetry
+# Then open http://localhost:8080 in your browser.
 ```
 
 > _Note: some features, such as connection to the phospho cloud, AI training, and AI control, are not available when installing from source._

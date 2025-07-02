@@ -23,20 +23,14 @@ def simulation_init():
         logger.debug("Headless mode enabled")
 
     elif config.SIM_MODE == "gui":
-        # Spin up a new process for the simulation
+        # Start the PyBullet GUI in the current process. This avoids relying on
+        # an external simulator (previously expected in simulation/pybullet),
+        # making the GUI mode work out-of-the-box as long as an X-server is
+        # available.
 
-        # Run a new python process
-        # cd ./simulation/pybullet && uv run --python 3.8 main.py
-        absolute_path = os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__), "..", "..", "..", "simulation", "pybullet"
-            )
-        )
-        subprocess.Popen(["uv", "run", "--python", "3.8", "main.py"], cwd=absolute_path)
-        # Wait for 1 second to allow the simulation to start
-        time.sleep(1)
-        p.connect(p.SHARED_MEMORY)
-        logger.debug("GUI mode enabled")
+        p.connect(p.GUI)
+        p.setGravity(0, 0, -9.81)
+        logger.debug("GUI mode enabled (in-process)")
 
     else:
         raise ValueError("Invalid simulation mode")
